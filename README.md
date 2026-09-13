@@ -78,14 +78,16 @@ with open("big.txt", encoding="utf-8") as f:
 - A pair of regional indicator letters, i.e. a flag (`🇨🇦`).
 - A keycap sequence: digit or `#`/`*`, optional variation selector,
   combining enclosing keycap (`1️⃣`).
+- A tag sequence: a base emoji followed by tag characters spelling out
+  a subdivision code and a cancel tag, e.g. the England flag
+  (`🏴󠁧󠁢󠁥󠁮󠁧󠁿`).
 
 ## Known limitations
 
 The table in `_ranges.py` classifying which code points can start or
 continue a sequence is a hand-picked subset of Unicode's emoji data,
 not the generated table from the official files. It covers the emoji
-in common use but will miss some newer or obscure ones. Tag sequences
-(subdivision flags like the England flag) aren't recognized yet either.
+in common use but will miss some newer or obscure ones.
 
 ## Installing
 

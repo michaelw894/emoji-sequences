@@ -3,11 +3,12 @@
 An "emoji sequence" here means what UTS #51 calls it: a base emoji
 optionally followed by a variation selector or skin tone modifier, a
 chain of ZWJ-joined emoji (families, professions, ...), a pair of
-regional indicators (flags), or a keycap sequence (digit/#/* + VS16 +
-combining enclosing keycap). Treating these as one unit matters because
-naive code-point-by-code-point handling splits a single visual emoji
-into several "characters", which breaks counting, truncation, and
-search.
+regional indicators (flags), a keycap sequence (digit/#/* + VS16 +
+combining enclosing keycap), or a tag sequence (a base emoji plus tag
+characters and a cancel tag, e.g. the England flag). Treating these as
+one unit matters because naive code-point-by-code-point handling
+splits a single visual emoji into several "characters", which breaks
+counting, truncation, and search.
 
 The scanner never buffers more than a bounded amount of state: at most
 one pending emoji sequence, a small pushback stack (at most a couple of
@@ -21,7 +22,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Iterator, List, Optional
 
-from ._ranges import is_emoji_modifier, is_extended_pictographic, is_regional_indicator
+from ._ranges import (
+    TAG_TERMINATOR,
+    is_emoji_modifier,
+    is_extended_pictographic,
+    is_regional_indicator,
+    is_tag_spec_char,
+)
 
 ZWJ = "‍"
 VARIATION_SELECTOR_16 = "️"
@@ -115,6 +122,25 @@ class SequenceScanner:
             self._push_back(second)
         return None
 
+    def _read_tag_spec(self, first: str) -> Optional[str]:
+        # A tag sequence is tag_base tag_spec_char+ TAG_TERMINATOR. If we
+        # run out of input or hit a non-spec character before the
+        # terminator, it isn't one - push everything back so the caller
+        # can reprocess it as plain text.
+        consumed = [first]
+        while True:
+            nxt = self._next()
+            if nxt is None:
+                break
+            consumed.append(nxt)
+            if nxt == TAG_TERMINATOR:
+                return "".join(consumed)
+            if not is_tag_spec_char(nxt):
+                break
+        for ch in reversed(consumed):
+            self._push_back(ch)
+        return None
+
     def _read_sequence(self, first: str) -> str:
         # Flags are exactly two regional indicators, never more.
         if is_regional_indicator(first):
@@ -134,6 +160,11 @@ class SequenceScanner:
             if nxt == VARIATION_SELECTOR_16 or is_emoji_modifier(nxt):
                 seq.append(nxt)
                 continue
+            if is_tag_spec_char(nxt):
+                tag = self._read_tag_spec(nxt)
+                if tag is not None:
+                    seq.append(tag)
+                break
             if nxt == ZWJ:
                 after = self._next()
                 if after is not None and (

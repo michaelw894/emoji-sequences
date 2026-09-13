@@ -10,6 +10,9 @@ CANADA_FLAG = "\U0001F1E8\U0001F1E6"
 THUMBS_UP_MEDIUM = "\U0001F44D\U0001F3FD"
 KEYCAP_ONE = "1️⃣"
 KEYCAP_HASH_NO_VS = "#⃣"
+ENGLAND_FLAG = (
+    "\U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F"
+)
 
 
 def tokens_of(text):
@@ -94,6 +97,48 @@ class KeycapTests(unittest.TestCase):
     def test_digit_followed_by_vs16_but_no_keycap(self):
         text = "1️x"
         self.assertEqual(tokens_of(text), [Token(text, is_emoji=False)])
+
+
+class TagSequenceTests(unittest.TestCase):
+    def test_subdivision_flag_is_one_token(self):
+        self.assertEqual(
+            tokens_of(ENGLAND_FLAG), [Token(ENGLAND_FLAG, is_emoji=True)]
+        )
+
+    def test_tag_sequence_embedded_in_plain_text(self):
+        text = "go " + ENGLAND_FLAG + " team"
+        self.assertEqual(
+            tokens_of(text),
+            [
+                Token("go ", is_emoji=False),
+                Token(ENGLAND_FLAG, is_emoji=True),
+                Token(" team", is_emoji=False),
+            ],
+        )
+
+    def test_tag_sequence_split_across_chunks(self):
+        chunks = [ENGLAND_FLAG[:1], ENGLAND_FLAG[1:4], ENGLAND_FLAG[4:]]
+        self.assertEqual(list(scan(chunks)), [Token(ENGLAND_FLAG, is_emoji=True)])
+
+    def test_unterminated_tag_sequence_falls_back_to_plain_text(self):
+        text = "\U0001F3F4\U000E0067\U000E0062x"
+        self.assertEqual(
+            tokens_of(text),
+            [
+                Token("\U0001F3F4", is_emoji=True),
+                Token("\U000E0067\U000E0062x", is_emoji=False),
+            ],
+        )
+
+    def test_tag_sequence_cut_off_at_end_of_input(self):
+        text = "\U0001F3F4\U000E0067\U000E0062"
+        self.assertEqual(
+            tokens_of(text),
+            [
+                Token("\U0001F3F4", is_emoji=True),
+                Token("\U000E0067\U000E0062", is_emoji=False),
+            ],
+        )
 
 
 class PlainTextTests(unittest.TestCase):
