@@ -70,6 +70,22 @@ with open("big.txt", encoding="utf-8") as f:
         ...
 ```
 
+Counting how many "characters" are in a string, the way a person would
+see it:
+
+```python
+from emoji_sequences import count_graphemes_text
+
+len("👨‍👩‍👧‍👦")               # 7 - it's actually four people joined by ZWJs
+count_graphemes_text("👨‍👩‍👧‍👦")  # 1 - one family, as you'd expect
+```
+
+`count_graphemes` takes the same chunk iterable as `scan`. This counts
+each emoji sequence as one unit and each other code point as one unit;
+it isn't full Unicode grapheme cluster segmentation (it won't, for
+example, join a stray combining accent onto a preceding letter), but
+it fixes the specific miscount that emoji sequences cause.
+
 ## What counts as one sequence
 
 - A base emoji, optionally followed by a variation selector or a skin

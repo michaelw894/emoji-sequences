@@ -198,6 +198,28 @@ def scan_text(text: str) -> Iterator[Token]:
     return scan((text,))
 
 
+def count_graphemes(chunks: Iterable[str]) -> int:
+    """Count user-visible units: each emoji sequence counts as one, each
+    plain-text code point counts as one.
+
+    This is what `len()` gets wrong for strings containing emoji - a
+    family emoji is one thing you see but seven code points, so
+    `len(text)` overcounts it by six. This isn't full UAX #29 grapheme
+    cluster segmentation (it doesn't join combining marks onto a base
+    character outside of the emoji cases scan() already knows about),
+    but it fixes the specific miscount emoji sequences cause.
+    """
+    total = 0
+    for tok in SequenceScanner(_iter_codepoints(chunks)).tokens():
+        total += 1 if tok.is_emoji else len(tok.text)
+    return total
+
+
+def count_graphemes_text(text: str) -> int:
+    """Convenience wrapper for count_graphemes() on a single string."""
+    return count_graphemes((text,))
+
+
 def iter_file(path: str, chunk_size: int = 65536) -> Iterator[Token]:
     """Scan a text file on disk without reading it into memory at once."""
 

@@ -2,7 +2,14 @@ import os
 import tempfile
 import unittest
 
-from emoji_sequences import Token, iter_file, scan, scan_text
+from emoji_sequences import (
+    Token,
+    count_graphemes,
+    count_graphemes_text,
+    iter_file,
+    scan,
+    scan_text,
+)
 
 FAMILY = "\U0001F468‍\U0001F469‍\U0001F467‍\U0001F466"
 HEART_ON_FIRE = "❤️‍\U0001F525"
@@ -186,6 +193,37 @@ class ChunkBoundaryTests(unittest.TestCase):
         self.assertGreaterEqual(len(result), 2)
         for tok in result[:-1]:
             self.assertEqual(len(tok.text), _TEXT_CHUNK_LIMIT)
+
+
+class CountGraphemesTests(unittest.TestCase):
+    def test_plain_text_counts_code_points(self):
+        self.assertEqual(count_graphemes_text("hello"), 5)
+
+    def test_family_counts_as_one(self):
+        self.assertEqual(count_graphemes_text(FAMILY), 1)
+        self.assertLess(count_graphemes_text(FAMILY), len(FAMILY))
+
+    def test_flag_counts_as_one(self):
+        self.assertEqual(count_graphemes_text(CANADA_FLAG), 1)
+
+    def test_keycap_counts_as_one(self):
+        self.assertEqual(count_graphemes_text(KEYCAP_ONE), 1)
+
+    def test_mixed_text_and_emoji(self):
+        text = "hi " + FAMILY + CANADA_FLAG + " " + KEYCAP_ONE
+        # "hi " (3) + family (1) + flag (1) + " " (1) + keycap (1)
+        self.assertEqual(count_graphemes_text(text), 7)
+
+    def test_empty_string(self):
+        self.assertEqual(count_graphemes_text(""), 0)
+
+    def test_matches_len_when_no_emoji_present(self):
+        text = "just plain words, no pictures"
+        self.assertEqual(count_graphemes_text(text), len(text))
+
+    def test_count_graphemes_takes_chunk_iterable(self):
+        chunks = [FAMILY[:2], FAMILY[2:5], FAMILY[5:], "!"]
+        self.assertEqual(count_graphemes(chunks), 2)
 
 
 class IterFileTests(unittest.TestCase):
